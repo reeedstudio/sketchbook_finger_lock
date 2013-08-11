@@ -72,7 +72,7 @@
 
 class Adafruit_Fingerprint {
 
- public:
+public:
 #if ARDUINO >= 100
   Adafruit_Fingerprint(SoftwareSerial *);
 #else
@@ -93,7 +93,10 @@ class Adafruit_Fingerprint {
 
   uint16_t fingerID, confidence, templateCount;
 
- private: 
+  void setKey(unsigned long key_t);
+  void setAddr(unsigned long addr_t);
+
+private: 
   uint32_t thePassword;
   uint32_t theAddress;
 #if ARDUINO >= 100

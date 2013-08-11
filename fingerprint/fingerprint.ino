@@ -178,6 +178,8 @@ void setup()
     DBG("hello world");
     cout << "begin to init wdt: 8s" << endl;
 #endif
+
+    finger.setKey(0x85112999);
     wdt_init(WDTO_8S);
 
     pinMode(A2, OUTPUT);

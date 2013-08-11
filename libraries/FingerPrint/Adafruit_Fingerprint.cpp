@@ -28,7 +28,7 @@
 
 Adafruit_Fingerprint::Adafruit_Fingerprint(SoftwareSerial *ss) {
 
-    thePassword = 0;
+    thePassword = 0x0;//0x85112999;
     theAddress = 0xFFFFFFFF;
 
     mySerial = ss;
@@ -81,6 +81,14 @@ uint8_t Adafruit_Fingerprint::image2Tz(uint8_t slot) {
 }
 
 
+void Adafruit_Fingerprint::setKey(unsigned long key_t)
+{
+    thePassword = key_t;
+}
+void Adafruit_Fingerprint::setAddr(unsigned long addr_t)
+{
+    theAddress = addr_t;
+}
 uint8_t Adafruit_Fingerprint::createModel(void) {
     uint8_t packet[] = {FINGERPRINT_REGMODEL};
     writePacket(theAddress, FINGERPRINT_COMMANDPACKET, sizeof(packet)+2, packet);

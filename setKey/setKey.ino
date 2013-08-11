@@ -1,5 +1,5 @@
 /*
-  fingerprint.ino
+  setKey.ino
   2013 Copyright (c) Seeed Technology Inc.  All right reserved.
 
   Author:Loovee
@@ -53,15 +53,16 @@ SoftwareSerial mySerial(A5, A4);                                // tx, rx
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 Servo myservo;                                                  // create servo object to control a servo
 
-const unsigned long old_key_t  = 0x00000000;
+const unsigned long old_key_t  = 0x99;
 const unsigned long new_key_t  = 0x85112999;
 
 const unsigned long old_addr_t = 0xffffffff;
 const unsigned long new_addr_t = 0x00101020;
 
-int setKey(unsigned char old_key, unsigned char new_key)
+int setKey(unsigned long old_key, unsigned long new_key)
 {
     unsigned char packet[] = {0x12, (new_key>>24), (new_key>>16), (new_key>>8), new_key};        
+
     finger.writePacket(old_addr_t, FINGERPRINT_COMMANDPACKET, 7, packet);
     int len = finger.getReply(packet);
 
@@ -80,6 +81,8 @@ int setKey(unsigned char old_key, unsigned char new_key)
 
 void setKey_test()
 {
+    finger.setKey(old_key_t);
+START:
     if(finger.verifyPassword())
     {
         cout << "verify password ok" << endl;
@@ -88,7 +91,7 @@ void setKey_test()
     else
     {
         cout << "verify password no ok!" << endl;
-        while(1);
+        goto START; 
     }
 
     cout << "begin to set key" << endl;
@@ -142,12 +145,14 @@ void setup()
 
     FPOFF();
     finger.begin(19200);
-    delay(2000);
+    delay(10000);
     digitalWrite(A2, LOW);
 #if __Debug
     cout << "setup ok!" << endl;
 #endif
     cout << "setkey_test" << endl;
+    FPON();
+    delay(1000);
     setKey_test();
 }
 
