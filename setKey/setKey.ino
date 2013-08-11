@@ -28,7 +28,7 @@
 
 
 #define __Debug         1                               // if debug mode
-#define __WDT           1                               // if use wdt
+#define __WDT           0                               // if use wdt
 
 
 #if __WDT
@@ -53,121 +53,76 @@ SoftwareSerial mySerial(A5, A4);                                // tx, rx
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 Servo myservo;                                                  // create servo object to control a servo
 
-const long CHECKTIME  = 5000;                                   // ms
-const int  angleServo = 60;                                     // Rotation angle
+const unsigned long old_key_t  = 0x00000000;
+const unsigned long new_key_t  = 0x85112999;
 
-const int  NOISE_MIN  = 220;
-const int  NOISE_MAX  = 500;
-int bgNoise_xn = 150;
+const unsigned long old_addr_t = 0xffffffff;
+const unsigned long new_addr_t = 0x00101020;
 
-#if __WDT
-void delay_wdt(long tms)
+int setKey(unsigned char old_key, unsigned char new_key)
 {
-    //DBG("get in delay_wdt");
-    long nt = tms/500;
-    //cout << "nt = " << nt << endl;
-    for(long i=0; i<nt; i++)
+    unsigned char packet[] = {0x12, (new_key>>24), (new_key>>16), (new_key>>8), new_key};        
+    finger.writePacket(old_addr_t, FINGERPRINT_COMMANDPACKET, 7, packet);
+    int len = finger.getReply(packet);
+
+    if(0xff == len)
     {
-        delay(500);
-        feed();
+        DBG("get nothing!!");
     }
-    delay(tms%500);
-    feed();
-}
-#else
-void delay_wdt(long tms)
-{
-    delay(tms);
-}
-#endif
 
-int getAnalog()
-{
-    int sum=0;
-    for(int i = 0; i<32; i++)
+    if((1==len) && ((packet[0] == FINGERPRINT_ACKPACKET) && (packet[1] == FINGERPRINT_OK)))
     {
-        sum+=analogRead(A7);
+        return true;
     }
-    return sum>>5;
+
+    return false;
 }
 
-
-
-int kick()
+void setKey_test()
 {
-    int noise_t = getAnalog();
-
-    if(noise_t>NOISE_MIN && noise_t<NOISE_MAX)
+    if(finger.verifyPassword())
     {
-        feed();
-        return 1;
+        cout << "verify password ok" << endl;
+
     }
-    feed();
-    return 0;
+    else
+    {
+        cout << "verify password no ok!" << endl;
+        while(1);
+    }
+
+    cout << "begin to set key" << endl;
+
+    if(setKey(old_key_t, new_key_t))
+    {
+        cout << "set key ok" << endl;
+    }
+    else
+    {
+        cout << "set key no ok" << endl;
+        while(1);
+    }
+
+    cout << "verify password again" << endl;
+
+
+    if(finger.verifyPassword())
+    {
+        cout << "verify password ok" << endl;
+
+    }
+    else
+    {
+        cout << "verify password no ok!" << endl;
+        while(1);
+    }
+
+    while(1);
 }
 
-void open_close_door()
+int setAddr(unsigned char *old_addr, unsigned char *new_addr)
 {
-    myservo.attach(6);
-    for(int i=20; i<angleServo; i++)
-    {
-        feed();
-        myservo.write(i);
-        delay_wdt(5);
-    }
 
-    delay_wdt(2000);
-
-    for(int i=(angleServo-1); i>=20; i--)
-    {
-        feed();
-        myservo.write(i);
-        delay_wdt(5);
-    }
-    myservo.detach();
-    feed();
-
-}
-
-void checkAndOpen()
-{
-    FPON();
-    delay_wdt(1000);
-
-    long t1 = millis();
-
-#if __Debug
-    cout << "checkAndOpen: t1 = " << t1 << endl;
-#endif
-    while(1)
-    {
-        if(getFingerprintIDez()>=0)
-        {
-            open_close_door();
-            FPOFF();
-            DBG("get right finger, open door now!!");
-            feed();
-            delay_wdt(5000);
-            return;
-        }
-
-        long t2 = millis();
-        long dt = t2 - t1;
-
-        if(dt > CHECKTIME)
-        {
-#if __Debug
-            cout << "checkAndOpen: t2 = " << t2 << endl;
-            cout << "checkAndOpen: dt = " << dt << endl;
-#endif
-            DBG("timer out: didn't get right finger");
-            break;
-        }
-        feed();
-    }
-    feed();
-
-    FPOFF();
 }
 
 void setup()
@@ -178,7 +133,6 @@ void setup()
     DBG("hello world");
     cout << "begin to init wdt: 8s" << endl;
 #endif
-    wdt_init(WDTO_8S);
 
     pinMode(A2, OUTPUT);
     pinMode(A3, OUTPUT);
@@ -188,57 +142,17 @@ void setup()
 
     FPOFF();
     finger.begin(19200);
-    feed();
-    delay_wdt(5000);
+    delay(2000);
     digitalWrite(A2, LOW);
-    feed();
 #if __Debug
     cout << "setup ok!" << endl;
 #endif
+    cout << "setkey_test" << endl;
+    setKey_test();
 }
 
 void loop()                     // run over and over again
 {
-    static int kickTimes = 0;
-    static long t1 = millis();
-
-    if(kick())
-    {
-#if __Debug
-        cout << "begin to check finger" << endl;
-#endif
-        checkAndOpen();
-        delay_wdt(500);
-
-        long t2 = millis();
-#if __Debug&0
-        cout << "dt = " << t2-t1 << endl;
-#endif
-        kickTimes++;
-
-        if(kickTimes>= 3 && (t2-t1)<60000)               // if 3times within 1min
-        {
-            DBG("3time within 1min, delay for 1mins");
-            delay_wdt(60000);
-            t1 = millis();
-            kickTimes = 0;
-        }
-        else if((t2-t1)>=60000)
-        {
-            DBG("excess 1min");
-            kickTimes = 1;
-            t1 = millis();
-        }
-        else
-        {
-            delay_wdt(5000);
-        }
-#if __Debug
-        cout << "works again" << endl;
-#endif
-        feed();
-    }
-    feed();
 }
 
 // returns -1 if failed, otherwise returns ID #

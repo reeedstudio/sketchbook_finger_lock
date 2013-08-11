@@ -34,6 +34,7 @@ Adafruit_Fingerprint::Adafruit_Fingerprint(SoftwareSerial *ss) {
     mySerial = ss;
 }
 
+
 void Adafruit_Fingerprint::begin(uint16_t baudrate) {
     mySerial->begin(baudrate);
 }
@@ -218,36 +219,50 @@ uint8_t Adafruit_Fingerprint::getReply(uint8_t packet[], uint16_t timeout)
 #ifdef FINGERPRINT_DEBUG
     Serial.print("<--- ");
 #endif
-    while (true) {
-        while (!mySerial->available()) {
+    while (true) 
+    {
+        while (!mySerial->available()) 
+        {
             delay(1);
             timer++;
             if (timer >= timeout) return FINGERPRINT_TIMEOUT;
         }
         // something to read!
+        
         reply[idx] = mySerial->read();
+        
 #ifdef FINGERPRINT_DEBUG
         Serial.print(" 0x"); Serial.print(reply[idx], HEX);
 #endif
-        if ((idx == 0) && (reply[0] != (FINGERPRINT_STARTCODE >> 8)))
-        continue;
+        if ((idx == 0) && (reply[0] != (FINGERPRINT_STARTCODE >> 8)))           // wait head
+        {
+            continue;
+        }
+        
         idx++;
 
         // check packet!
-        if (idx >= 9) {
-            if ((reply[0] != (FINGERPRINT_STARTCODE >> 8)) ||
-            (reply[1] != (FINGERPRINT_STARTCODE & 0xFF)))
-            return FINGERPRINT_BADPACKET;
+        if (idx >= 9) 
+        {
+            if ( (reply[0] != (FINGERPRINT_STARTCODE >> 8)) || (reply[1] != (FINGERPRINT_STARTCODE & 0xFF)) )   // head err
+            {
+                return FINGERPRINT_BADPACKET;
+            }
+            
             uint8_t packettype = reply[6];
-            //Serial.print("Packet type"); Serial.println(packettype);
+            
             uint16_t len = reply[7];
+            
             len <<= 8;
             len |= reply[8];
-            len -= 2;
-            //Serial.print("Packet len"); Serial.println(len);
+            
+            len -= 2;                   // packge len without checksum
+
             if (idx <= (len+10)) continue;
+            
             packet[0] = packettype;
-            for (uint8_t i=0; i<len; i++) {
+            for (uint8_t i=0; i<len; i++) 
+            {
                 packet[1+i] = reply[9+i];
             }
 #ifdef FINGERPRINT_DEBUG

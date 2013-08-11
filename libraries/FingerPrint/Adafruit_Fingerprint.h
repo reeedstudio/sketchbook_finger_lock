@@ -71,6 +71,7 @@
 
 
 class Adafruit_Fingerprint {
+
  public:
 #if ARDUINO >= 100
   Adafruit_Fingerprint(SoftwareSerial *);
