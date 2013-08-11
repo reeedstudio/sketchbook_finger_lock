@@ -19,116 +19,18 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include <avr/wdt.h>
 
 #include <Adafruit_Fingerprint.h>
 #include <SoftwareSerial.h>
 #include <Streaming.h>
-#include <Servo.h>
-#include <EEPROM.h>
 
 
-#define __Debug         0                               // if debug mode
-#define __WDT           1                               // if use wdt
+#define __Debug         1                               // if debug mode
 
-
-#if __WDT
-#define wdt_init(X)     wdt_enable(X)
-#define feed()          wdt_reset()
-#else
-#define wdt_init(X)
-#define feed()
-#endif
-
-
-#if __Debug
-#define DBG(X)          Serial.println(X)
-#else
-#define DBG(X)
-#endif
-
-#define FPON()          digitalWrite(A3, LOW)
-#define FPOFF()         digitalWrite(A3, HIGH)
 
 SoftwareSerial mySerial(A5, A4);                                // tx, rx
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
-Servo myservo;                                                  // create servo object to control a servo
 
-const long CHECKTIME  = 5000;                                   // ms
-const int  angleServo = 60;                                     // Rotation angle
-
-const int  NOISE_MIN  = 220;
-const int  NOISE_MAX  = 500;
-int bgNoise_xn = 150;
-
-#if __WDT
-void delay_wdt(long tms)
-{
-    //DBG("get in delay_wdt");
-    long nt = tms/500;
-    //cout << "nt = " << nt << endl;
-    for(long i=0; i<nt; i++)
-    {
-        delay(500);
-        feed();
-    }
-    delay(tms%500);
-    feed();
-}
-#else
-void delay_wdt(long tms)
-{
-    delay(tms);
-}
-#endif
-
-int getAnalog()
-{
-    int sum=0;
-    for(int i = 0; i<32; i++)
-    {
-        sum+=analogRead(A7);
-    }
-    return sum>>5;
-}
-
-
-
-int kick()
-{
-    int noise_t = getAnalog();
-
-    if(noise_t>NOISE_MIN && noise_t<NOISE_MAX)
-    {
-        feed();
-        return 1;
-    }
-    feed();
-    return 0;
-}
-
-void open_close_door()
-{
-    myservo.attach(6);
-    for(int i=20; i<angleServo; i++)
-    {
-        feed();
-        myservo.write(i);
-        delay_wdt(5);
-    }
-
-    delay_wdt(2000);
-
-    for(int i=(angleServo-1); i>=20; i--)
-    {
-        feed();
-        myservo.write(i);
-        delay_wdt(5);
-    }
-    myservo.detach();
-    feed();
-
-}
 
 void checkAndOpen()
 {
@@ -171,29 +73,6 @@ void checkAndOpen()
     FPOFF();
 }
 
-void setKey()
-{
-    unsigned char key_s[4];
-    unsigned long key_e = 0;
-
-#if __Debug
-    cout << "get key from eeprom: 0x";
-#endif
-    for(int i=0; i<4; i++)
-    {
-        
-        key_s[i] = EEPROM.read(i+92);
-        key_e = key_e<<8;
-        key_e += key_s[i];
-#if __Debug
-        Serial.print(key_s[i], HEX);
-#endif
-    }
-
-    finger.setKey(key_e);
-
-}
-
 void setup()
 {
 
@@ -202,9 +81,8 @@ void setup()
     DBG("hello world");
     cout << "begin to init wdt: 8s" << endl;
 #endif
-    
-    setKey();
 
+    finger.setKey(0x85112999);
     wdt_init(WDTO_8S);
 
     pinMode(A2, OUTPUT);
