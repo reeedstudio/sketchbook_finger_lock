@@ -28,7 +28,7 @@
 
 Adafruit_Fingerprint::Adafruit_Fingerprint(SoftwareSerial *ss) {
 
-    thePassword = 0x0;//0x85112999;
+    thePassword = 0x0;
     theAddress = 0xFFFFFFFF;
 
     mySerial = ss;
