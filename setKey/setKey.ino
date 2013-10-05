@@ -32,8 +32,8 @@
 SoftwareSerial mySerial(A5, A4);                                // tx, rx
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 
-const unsigned long old_key_t  = 0x0;      // set your old key here
-const unsigned long new_key_t  = 0x0;      // set your new key here
+const unsigned long old_key_t  = 0x85112991;                          // set your old key here
+const unsigned long new_key_t  = 0x85112991;                   // set your new key here
 
 void write_eeprom()
 {

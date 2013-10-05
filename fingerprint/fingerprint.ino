@@ -28,8 +28,9 @@
 #include <EEPROM.h>
 
 
-#define __Debug         0                               // if debug mode
-#define __WDT           1                               // if use wdt
+#define __Debug         1                               // if debug mode
+#define __WDT           0                               // if use wdt
+#define __Sound         0                               // if use sound sensor
 
 
 #if __WDT
@@ -96,6 +97,7 @@ int getAnalog()
 
 int kick()
 {
+#if __Sound
     int noise_t = getAnalog();
 
     if(noise_t>NOISE_MIN && noise_t<NOISE_MAX)
@@ -105,6 +107,10 @@ int kick()
     }
     feed();
     return 0;
+#else
+
+    return 1;
+#endif
 }
 
 void open_close_door()
@@ -137,7 +143,7 @@ void checkAndOpen()
 
     long t1 = millis();
 
-#if __Debug
+#if __Debug & __Sound
     cout << "checkAndOpen: t1 = " << t1 << endl;
 #endif
     while(1)
@@ -148,10 +154,13 @@ void checkAndOpen()
             FPOFF();
             DBG("get right finger, open door now!!");
             feed();
+#if __Sound
             delay_wdt(5000);
+#endif
             return;
         }
 
+#if __Sound
         long t2 = millis();
         long dt = t2 - t1;
 
@@ -165,6 +174,9 @@ void checkAndOpen()
             break;
         }
         feed();
+        
+#endif
+
     }
     feed();
 
@@ -216,7 +228,13 @@ void setup()
     FPOFF();
     finger.begin(19200);
     feed();
+    
+#if __Sound
     delay_wdt(5000);
+#else
+    delay(500);
+#endif
+
     digitalWrite(A2, LOW);
     feed();
 #if __Debug
@@ -237,10 +255,8 @@ void loop()                     // run over and over again
         checkAndOpen();
         delay_wdt(500);
 
+#if __Sound
         long t2 = millis();
-#if __Debug&0
-        cout << "dt = " << t2-t1 << endl;
-#endif
         kickTimes++;
 
         if(kickTimes>= 3 && (t2-t1)<60000)               // if 3times within 1min
@@ -262,6 +278,8 @@ void loop()                     // run over and over again
         }
 #if __Debug
         cout << "works again" << endl;
+#endif
+
 #endif
         feed();
     }

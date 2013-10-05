@@ -1,48 +1,69 @@
-/***************************************************
-  This is an example sketch for our optical Fingerprint sensor
+/*
+  enroll.ino
+  2013 Copyright (c) Seeed Technology Inc.  All right reserved.
 
-  Designed specifically to work with the Adafruit BMP085 Breakout
-  ----> http://www.adafruit.com/products/751
+  Author:Loovee
+  2013-10-5
+ 
+  enroll your finger
 
-  These displays use TTL Serial to communicate, 2 pins are required to
-  interface
-  Adafruit invests time and resources providing this open source code,
-  please support Adafruit and open-source hardware by purchasing
-  products from Adafruit!
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
 
-  Written by Limor Fried/Ladyada for Adafruit Industries.
-  BSD license, all text above must be included in any redistribution
- ****************************************************/
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
 
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
 #include <Adafruit_Fingerprint.h>
 #include <Streaming.h>
-#if ARDUINO >= 100
- #include <SoftwareSerial.h>
-#else
- #include <NewSoftSerial.h>
-#endif
+#include <SoftwareSerial.h>
+#include <EEPROM.h>
+
 
 uint8_t getFingerprintEnroll(uint8_t id);
 
-
-// pin #2 is IN from sensor (GREEN wire)
-// pin #3 is OUT from arduino  (WHITE wire)
-#if ARDUINO >= 100
-SoftwareSerial mySerial(A5, A4);// tx, rx
-#else
-NewSoftSerial mySerial(2, 3);
-#endif
+SoftwareSerial mySerial(A5, A4);
 
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 
+void setKey()
+{
+    unsigned char key_s[4];
+    unsigned long key_e = 0;
+
+#if __Debug
+    cout << "get key from eeprom: 0x";
+#endif
+    for(int i=0; i<4; i++)
+    {
+        
+        key_s[i] = EEPROM.read(i+92);
+        key_e = key_e<<8;
+        key_e += key_s[i];
+#if __Debug
+        Serial.print(key_s[i], HEX);
+#endif
+    }
+
+    finger.setKey(key_e);
+
+}
+
 void setup()
 {
-    Serial.begin(38400);
-    Serial.println("fingertest");
 
-    // set the data rate for the sensor serial port
+    Serial.begin(38400);
     finger.begin(19200);
 
+    setKey();
+    
     if (finger.verifyPassword()) {
         Serial.println("Found fingerprint sensor!");
     } else {
@@ -55,10 +76,26 @@ void loop()                     // run over and over again
 {
     Serial.println("Type in the ID # you want to save this finger as...");
     uint8_t id = 0;
-    while (true) {
+    
+    while (Serial.available())
+    {
+        char c = Serial.read();
+    }
+            
+    while (true) 
+    {
         while (! Serial.available());
         char c = Serial.read();
-        if (! isdigit(c)) break;
+        
+        if (! isdigit(c)) 
+        {
+            while (Serial.available())
+            {
+                c = Serial.read();
+            }
+            
+            break;
+        }
         id *= 10;
         id += c - '0';
     }
